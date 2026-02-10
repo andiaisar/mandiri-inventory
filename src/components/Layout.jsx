@@ -1,12 +1,24 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Package, LayoutDashboard, Plus, LogOut, Menu, X } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../services/firebaseConfig';
 
 const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHeader }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const menuItems = [
@@ -91,7 +103,10 @@ const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHea
               </div>
             </div>
           </div>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 hover:text-red-300 transition-all w-full text-left">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 hover:text-red-300 transition-all w-full text-left"
+          >
             <LogOut size={20} />
             <span>Logout</span>
           </button>
