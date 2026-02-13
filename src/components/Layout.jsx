@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, LayoutDashboard, Plus, LogOut, Menu, X } from 'lucide-react';
+import { Package, LayoutDashboard, Plus, LogOut, Menu, X, Shield, Loader2 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHeader }) => {
+  const { userProfile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
   const toggleSidebar = () => {
@@ -13,19 +16,31 @@ const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHea
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return; // Prevent multiple clicks
+    
+    setIsLoggingOut(true);
     try {
       await signOut(auth);
+      // Navigation will happen automatically via AuthContext
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
+      alert('Gagal logout. Silakan coba lagi.');
+      setIsLoggingOut(false);
     }
   };
 
   const menuItems = [
-    { id: 'dashboard', path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { id: 'inventory', path: '#', icon: Package, label: 'Inventory List' },
-    { id: 'add-item', path: '/add-item', icon: Plus, label: 'Add Item' },
+    { id: 'dashboard', path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['user', 'admin'] },
+    { id: 'inventory', path: '#', icon: Package, label: 'Inventory List', roles: ['user', 'admin'] },
+    { id: 'add-item', path: '/add-item', icon: Plus, label: 'Add Item', roles: ['user', 'admin'] },
+    { id: 'admin', path: '/admin', icon: Shield, label: 'Admin Panel', roles: ['admin'] },
   ];
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => 
+    !item.roles || item.roles.includes(userProfile?.role || 'user')
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -67,7 +82,7 @@ const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHea
         
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
-            {menuItems.map((item) => {
+            {visibleMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeMenu === item.id;
               
@@ -95,20 +110,30 @@ const Layout = ({ children, title, subtitle, activeMenu = 'dashboard', customHea
           <div className="mb-4 p-3 bg-blue-800 rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-mandiri-gold rounded-full flex items-center justify-center text-mandiri-blue font-bold text-sm">
-                AI
+                {userProfile?.displayName?.charAt(0).toUpperCase() || userProfile?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div>
-                <p className="text-sm font-semibold">Andi Isar</p>
-                <p className="text-xs text-blue-200">Administrator</p>
+                <p className="text-sm font-semibold">{userProfile?.displayName || userProfile?.email || 'User'}</p>
+                <p className="text-xs text-blue-200 capitalize">{userProfile?.role || 'User'}</p>
               </div>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 hover:text-red-300 transition-all w-full text-left"
+            disabled={isLoggingOut}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600/20 hover:text-red-300 transition-all w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <LogOut size={20} />
-            <span>Logout</span>
+            {isLoggingOut ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                <span>Logging out...</span>
+              </>
+            ) : (
+              <>
+                <LogOut size={20} />
+                <span>Logout</span>
+              </>
+            )}
           </button>
         </div>
       </aside>

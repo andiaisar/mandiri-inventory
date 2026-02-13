@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../services/firebaseConfig';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../services/firebaseConfig';
 import { Package, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const Register = () => {
@@ -59,6 +60,18 @@ const Register = () => {
       // Update user profile with display name
       await updateProfile(userCredential.user, {
         displayName: formData.fullName
+      });
+
+      // Create user document in Firestore with additional profile data
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        displayName: formData.fullName,
+        email: formData.email,
+        role: 'user', // Default role, can be changed to 'admin', 'manager', etc.
+        branchCode: null, // Can be assigned later by admin
+        branchName: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       // Success - redirect to dashboard

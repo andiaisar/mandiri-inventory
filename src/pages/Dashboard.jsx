@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../services/firebaseConfig';
 import { 
   Package, 
   TrendingUp, 
@@ -13,12 +17,25 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
+  const { userProfile } = useAuth();
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentDate(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Logout function - can be used anywhere in Dashboard
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Gagal logout. Silakan coba lagi.');
+    }
+  };
 
   const formatDate = (date) => {
     return date.toLocaleDateString('id-ID', { 
@@ -41,7 +58,7 @@ const Dashboard = () => {
     <div className="flex items-center justify-between gap-4 w-full">
       <div className="min-w-0 flex-1">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-mandiri-blue mb-1 truncate">
-          Selamat Datang, Andi Isar
+          Selamat Datang, {userProfile?.displayName || userProfile?.email || 'User'}
         </h2>
         <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 flex-wrap">
           <Calendar size={14} className="shrink-0" />
@@ -49,6 +66,20 @@ const Dashboard = () => {
           <span className="sm:hidden">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           <span>•</span>
           <span>{formatTime(currentDate)}</span>
+          {userProfile?.role && (
+            <>
+              <span>•</span>
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                {userProfile.role}
+              </span>
+            </>
+          )}
+          {userProfile?.branchCode && (
+            <>
+              <span>•</span>
+              <span className="text-xs font-medium">{userProfile.branchCode}</span>
+            </>
+          )}
         </p>
       </div>
       <div className="text-right hidden sm:block shrink-0">
